@@ -12,7 +12,7 @@ The orbits from the fit of GK - GI Tau
 
 
 ## Author
-The project was completed by Logan Pearce (http://www.loganpearcescience.com), under the mentorship of Howard Isaacson, during the Berkeley SETI Research Center internship in summer 2018 (https://seti.berkeley.edu/Internship.html)
+The project was completed by Logan Pearce (http://www.loganpearcescience.com), under the mentorship of Dr Adam Krau at the University of Texas at Austin.
 
 
 ## Acknowledgments
@@ -20,6 +20,4 @@ The project was completed by Logan Pearce (http://www.loganpearcescience.com), u
 This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.
 
 Software:
-numpy, astropy, pandas, matplotlib, MySQLdb, MySQL Connector/Python
-
-The author wishes to aknowledge to support of the Breakthrough Initiatives and BSRC for the opportunity and funding to come to Berekely and participate in this research; the mentorship of Howard Isaacson, Steve Croft, and Andrew Siemion; the assistance of Griffin Foster, Scott Ransom, and Matt Lebofsky for overcoming numerous sticking points.
+numpy, astropy, MySQL Connector/Python
