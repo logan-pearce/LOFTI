@@ -5,6 +5,7 @@ This is my implementation of Orbits for the Impatient developed by Blunt et.al. 
 This is the version of LOFTI that fits in 6-d phasespace, one observation of RA/Dec position, RA/Dec proper motions, and radial velocity.  It is optimal for fitting wide binaries in Gaia, for example.  
 
 Repository contents:
+
 Solving_for_orbital_elements_given_velocities.pdf outlines the math and the methodology used in the fit.  
 lofti_phasespace_GKTau_mpi.py the script for fitting Gaia astrometry to the wide binary pair GK Tau and GI Tau.
 lofti_plot.py script which generates the plots and statistical results of the fit.
