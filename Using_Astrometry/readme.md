@@ -10,6 +10,7 @@ Repository contents:
 lofti_GSC6214_mpi.py the script for fitting orbital elements to my astrometry for GSC 6214-210 system.
 orbit_fitter_results_GSC6214.ipynb Jupyter notebook for analyzing fit results and generating plots *not polished! very rough!*
 Custom_corner_plots_for_OFTI_results.ipynb Jupyter notebook in which I created a custom corner plot.  *Very not polished, very gross code but it works*
+
 Pearce_2019_AJ_157_71.pdf Journal article using these scripts
 
 
