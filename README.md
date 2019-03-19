@@ -12,7 +12,7 @@ The orbits from the fit of GK - GI Tau
 
 
 ## Author
-The project was completed by Logan Pearce (http://www.loganpearcescience.com), under the mentorship of Dr Adam Krau at the University of Texas at Austin.
+The project was completed by Logan Pearce (http://www.loganpearcescience.com), under the mentorship of Dr Adam Kraus at the University of Texas at Austin.
 
 
 ## Acknowledgments
