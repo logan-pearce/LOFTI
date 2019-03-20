@@ -119,6 +119,15 @@ def solve(f, M0, e, h):
 
 
 ########### Stats ################
+def mode(array):
+    n, bins = np.histogram(array, 10000, density=True)
+    max_bin = np.max(n)
+    bin_inner_edge = np.where(n==max_bin)[0]
+    bin_outer_edge = np.where(n==max_bin)[0]+1
+    # value in the middle of the highest bin:
+    mode=(bins[bin_outer_edge] - bins[bin_inner_edge])/2 + bins[bin_inner_edge]
+    return mode[0]
+
 def calc_min_interval(x, alpha):
     """Internal method to determine the minimum interval of a given width
     Assumes that x is sorted numpy array.
@@ -142,7 +151,7 @@ def calc_min_interval(x, alpha):
 
 def write_stats(params,params_names,filename):
     k = open(filename, 'w')
-    string = 'Parameter    Mean    Std    68% Min Cred Int    95% Min Cred Int'
+    string = 'Parameter    Mean    Std    Mode    68% Min Cred Int    95% Min Cred Int'
     k.write(string + "\n")
     k.close()
     for i in range(len(params)):
@@ -150,11 +159,15 @@ def write_stats(params,params_names,filename):
         sorts = np.sort(params[i])
         frac=0.683
         ci68 = calc_min_interval(sorts,(1-frac))
+        # 95% CI:
         frac=0.954
         ci95 = calc_min_interval(sorts,(1-frac))
+        # Mode:
+        m = mode(params[i])
+        # Write it out:
         k = open(filename, 'a')
         string = params_names[i] + '    ' + str(np.mean(params[i])) + '    ' + str(np.std(params[i])) + '    ' +\
-          str(ci68) + '    ' + str(ci95)
+          str(m) + '    ' + str(ci68) + '    ' + str(ci95)
         k.write(string + "\n")
         k.close()
 
@@ -282,7 +295,8 @@ def plot_orbits(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
     return fig
 
 
-def plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy', 
+def plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
+                    num_orbits = 25,
                     ticksize = 10, 
                     labelsize = 12,
                     Xlabel = 'Dec (")', 
@@ -334,7 +348,7 @@ def plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
     minorLocator   = MultipleLocator(5)
     plt.grid(ls=':')
 
-    for a,T,to,e,i,w,O in zip(a1,T1,to1,e1,i1,w1,O1)[0:25]:
+    for a,T,to,e,i,w,O in zip(a1,T1,to1,e1,i1,w1,O1)[0:num_orbits]:
         times = np.linspace(obsdate,obsdate+T,4000)
         X,Y,Z = np.array([]),np.array([]),np.array([])
         E = np.array([])
@@ -415,14 +429,14 @@ periastron = (1.-e)*a_au
 a_au2 = a_au[np.where(a_au<400)]
 to2 = to[np.where(a_au<400)]
 
-w_temp = w_deg
+w_temp = w_deg.copy()
 for j in range(len(w_deg)):
     if w_temp[j] > 180:
         w_temp[j] = w_temp[j] - 360.
     else:
         pass
 
-plot_params = [a_au2,e,i_deg,w_temp,O_deg,to2,periastron]
+plot_params = [a_au2,e,i_deg,w_deg,O_deg,to2,periastron] 
 plot_params_names = [r"$a \; (AU)$",r"$e$",r"$ i \; (deg)$",r"$ \omega \; (deg)$",r"$\Omega \; (deg)$",r"$T0 \; (yr)$",\
                          r"$a\,(1-e) \; (AU)$"]
 
@@ -431,12 +445,12 @@ plot_params_names = [r"$a \; (AU)$",r"$e$",r"$ i \; (deg)$",r"$ \omega \; (deg)$
 # Write out stats:
 print 'Writing out stats'
 stats_name = directory+system+'_stats'
-write_stats(plot_params,plot_params_names,stats_name)
+write_stats([a_au2,e,i_deg,w_temp,O_deg,to2,periastron],plot_params_names,stats_name)
 
 # Plot 1-D histograms
 print 'Making histograms'
 output_name = directory + system+"_hists.pdf"
-plot_1d_hist(plot_params,plot_params_names,output_name,50)
+plot_1d_hist([a_au2,e,i_deg,w_temp,O_deg,to2,periastron],plot_params_names,output_name,50)
 
 # Plot 2-D orbits
 print 'Plotting orbits'
@@ -464,10 +478,7 @@ plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6, plane = 'yz')
 # 3D
 print '3D'
 output_name = directory + system+"_orbits_3d"
-plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6)
-
-
-
+plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6, num_orbits = 20)
 
 print 'Done'
 
