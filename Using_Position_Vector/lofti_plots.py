@@ -1,3 +1,49 @@
+'''
+############################ LOFTI Plots ##############################
+                     written by Logan Pearce, 2019
+#######################################################################
+    Take the output of the LOFTI algorithm and generate statistics, histograms,
+    and nice plots for the accepted orbital configurations
+
+# Requires:
+#   python packages astropy, numpy, scipy, maplotplotlib, mpl_toolkits
+#   output files from OFTI algorithm, either individual process outputs or
+#   colelcted into one file.
+#
+# Input:
+#   Directory containing OFTI output
+#   Number of processes used to conduct the fit
+#
+# Output:
+#      stats: Text file of statistics for each parameter
+#      hists: PDF of 1d histograms of orbital parameter distributions
+#      orbits: PDF/JPGs of the three 2-d projections of 100 randomly selected orbits
+#      orbits_3d: PDF/JPG of a 3d plot of 25 randomly selected orbits
+#
+# usage: lofti_plots.py [-h] [-s SIZE] [-f COLLECT_INTO_ONE_FILE]
+                      system directory
+
+positional arguments:
+  system                name of the system under study to use for labeling
+                        output files
+  directory             the path to the directory containing lofti results
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SIZE, --size SIZE  Number of processes. default = 6
+  -f COLLECT_INTO_ONE_FILE, --collect_into_one_file COLLECT_INTO_ONE_FILE
+                        input a previously made master flat image. Default =
+                        False
+
+example:
+    python lofti_plots.py DSTuc DSTuc_ofti_output_2019-03-19 -s 48  <- Generate plots
+         for the DS Tuc system in the directory DSTuc_ofti_output_2019-03-19, which was fit using
+         48 parallel processes, and has already been consolidated into one file by the OFTI script
+    python lofti_plots.py DSTuc DSTuc_ofti_output_2019-03-19 -s 48 -f True <- Generate plots
+         for the DS Tuc system in the directory DSTuc_ofti_output_2019-03-19, which was fit using
+         48 parallel processes, but which has not been collected into one file by the terminating OFTI script.
+'''
+
 import argparse
 import numpy as np
 from scipy import stats
@@ -7,22 +53,36 @@ from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 #import matplotlib.style
 #import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
+import argparse
 
 ################################## User input ##################################
-system = 'GKTau'
-directory = system+"_ofti_output_2019-02-26/"
 
-size = 12
+# Pull out arguments:
+parser = argparse.ArgumentParser()
+# Required positional arguments:
+parser.add_argument("system", help="name of the system under study to use for labeling output files", type=str)
+parser.add_argument("directory", help="the path to the directory containing lofti results", type=str)
+# Optional positional arguments"
+parser.add_argument("-s","--size", help="Number of processes. default = 6",type=str)
+parser.add_argument("-f","--collect_into_one_file", help="input a previously made master flat image. Default = False",type=str)
+
+args = parser.parse_args()
+
+directory = args.directory+'/'
+system = args.system
+
+if args.size:
+    size = np.int_(args.size)
+else:
+    size = 6
+    print 'Using default size = 6'
 
 # Change this to True if the lofti fitter failed to collect all the results
 # into one file at the end of the run:
-Collect_into_one_file = True
+Collect_into_one_file = False
 
-### Input distance and observation date:
-
-d_star,d_star_err = 129.89184864417751,0.7553743009048957
-
-date = 2015.5
+if args.collect_into_one_file:
+    Collect_into_one_file = True
 
 ################################# Definitions ################################
 
@@ -84,6 +144,7 @@ def write_stats(params,params_names,filename):
     k = open(filename, 'w')
     string = 'Parameter    Mean    Std    68% Min Cred Int    95% Min Cred Int'
     k.write(string + "\n")
+    k.close()
     for i in range(len(params)):
         # 68% CI:
         sorts = np.sort(params[i])
@@ -95,7 +156,7 @@ def write_stats(params,params_names,filename):
         string = params_names[i] + '    ' + str(np.mean(params[i])) + '    ' + str(np.std(params[i])) + '    ' +\
           str(ci68) + '    ' + str(ci95)
         k.write(string + "\n")
-    k.close()
+        k.close()
 
 
 ########### Plots ################
@@ -217,7 +278,6 @@ def plot_orbits(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
         plt.colorbar().set_label(colorlabel)
     plt.savefig(filename+'.pdf', format='pdf')
     plt.savefig(filename+'.jpg', format='jpg', dpi=300)
-    plt.savefig(filename+'.png', format='png', dpi=300)
     plt.close(fig)
     return fig
 
@@ -298,7 +358,6 @@ def plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
     #    plt.colorbar().set_label(colorlabel)
     plt.savefig(filename+'.pdf', format='pdf')
     plt.savefig(filename+'.jpg', format='jpg', dpi=300)
-    plt.savefig(filename+'.png', format='png', dpi=300)
     return fig
 
 ################################# Begin script ##########################
@@ -335,22 +394,26 @@ if Collect_into_one_file == True:
 
     q.close()
 
+
 dat = np.loadtxt(open(files,"rb"),delimiter='   ',ndmin=2)
 num=dat.shape[0]
 
 # Read in final parameter arrays:
 a,T,to,e,i_deg,w_deg,O_deg,c,A,dice = dat[:,0],dat[:,1],dat[:,2],dat[:,3],dat[:,4],dat[:,5],dat[:,6],dat[:,7],dat[:,8],dat[:,9]
 i,w,O = np.radians(i_deg),np.radians(w_deg),np.radians(O_deg)
-print a.shape
+
+### Input distance and observation date:
+
+d_star,d_star_err = 44.1340385429632,0.06336868730526682
+
+date = 2015.5
 
 a_au=a*d_star
 periastron = (1.-e)*a_au
 
 ### Set what parameters to plot in the histograms:
-a_au2 = a_au[np.where(a_au<10000)]
-to2 = to[np.where(to>-100000)]
-
-#a_au2,to2 = a_au,to
+a_au2 = a_au[np.where(a_au<400)]
+to2 = to[np.where(a_au<400)]
 
 w_temp = w_deg
 for j in range(len(w_deg)):
@@ -360,7 +423,7 @@ for j in range(len(w_deg)):
         pass
 
 plot_params = [a_au2,e,i_deg,w_temp,O_deg,to2,periastron]
-plot_params_names = [r"$a \; (AU)$",r"$e$",r"$ i \; (deg)$",r"$ \omega \; (deg)$",r"$\Omega \; (deg)$",r"$T_0 \; (yr)$",\
+plot_params_names = [r"$a \; (AU)$",r"$e$",r"$ i \; (deg)$",r"$ \omega \; (deg)$",r"$\Omega \; (deg)$",r"$T0 \; (yr)$",\
                          r"$a\,(1-e) \; (AU)$"]
 
 ######################### Do the things ###################################
@@ -386,22 +449,22 @@ a1,T1,to1,e1,i1,w1,O1 = a[index],T[index],to[index],e[index],i[index],w[index],O
 # RA/Dec plane:
 print 'XY plane'
 output_name = directory + system+"_orbits"
-plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 35)
+plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6)
 
 # X/Z plane:
 print 'XZ plane'
 output_name = directory + system+"_orbits_xz"
-plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 35, plane = 'xz')
+plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 8, plane = 'xz')
 
 # Y/Z plane:
 print 'YZ plane'
 output_name = directory + system+"_orbits_yz"
-plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 35, plane = 'yz')
+plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6, plane = 'yz')
 
 # 3D
 print '3D'
 output_name = directory + system+"_orbits_3d"
-plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 35)
+plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6)
 
 
 
