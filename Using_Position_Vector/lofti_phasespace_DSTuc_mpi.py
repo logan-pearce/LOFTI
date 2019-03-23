@@ -1,8 +1,34 @@
+'''
+############################ LOFTI Position Vector ##############################
+                     written by Logan Pearce, 2019
+#################################################################################
+    Perform Logan's version of OFTI using one observation date and observations of 
+    relative position, velocity, or acceleration
+
+# Requires:
+#   python packages astropy, numpy, mpi4py
+#
+# Input:
+#   Manually enter the observations for the system into the script
+#
+# Output:
+#      system_accepted: all orbits accepted by fit in the order:
+#            a,T,to,e,i_deg,w_deg,O_deg,chi-squared,probability,dice roll
+#
+# usage: mpiexec -n number_of_processes python lofti_phasespace_DSTuc_mpi.py
+
+example:
+    mpiexec -n 12 python lofti_phasespace_DSTuc_mpi.py  <- run LOFTI on my laptop using 12 parallel processes
+    ibrun python lofti_phasespace_DSTuc_mpi.py <- sbatch command to run LOFTI on TACC.  For Lonestar 5, set nodes=1
+            and cores = 48
+'''
+
+
+
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
 from astropy.time import Time
-import matplotlib.pyplot as plt
 from datetime import date, datetime
 import os
 import time as tm
@@ -23,6 +49,7 @@ mas_to_deg = 1./3600000.
 accept_min = 6000
 
 ######################### Observations ###########################
+############# Input system observations here #####################
 name = 'DSTuc'
 
 now = str(date.today())
@@ -64,6 +91,9 @@ rv_rel,rv_err = rvb-rva, np.sqrt(rvaerr**2+rvberr**2)
 rvbjd = np.array([2454243.850252,2458439.288665,2458441.27394,2458442.302087,2458444.302819])
 rvbjd = Time(rvbjd, format='jd')
 d_rv = rvbjd.decimalyear
+
+######## Nothing else needs to be modified below this line #############
+########################################################################
 
 ############ Compute observables constraints: ##################
 # Compute Delta RA and Delta Dec:
@@ -320,7 +350,7 @@ def scale_and_rotate(X,Y):
     O2 = np.radians(O2)
     return a2,T2,to2,O2
 
-def calc_XY(a,T,to,e,i,w,O,date):
+def calc_XYZ(a,T,to,e,i,w,O,date):
     ''' Compute projected on-sky position only of a single object on a Keplerian orbit given a 
         set of orbital elements at a single observation point. 
         Inputs:
@@ -332,13 +362,14 @@ def calc_XY(a,T,to,e,i,w,O,date):
             w [rad]: argument of periastron
             O [rad]: longitude of nodes
             date [yrs]: observation date
-        Returns: X and Y coordinates [as] where +X is in the reference direction (north) and +Y is east
+        Returns: X, Y, and Z coordinates [as] where +X is in the reference direction (north) and +Y is east, and +Z
+            is towards observer
     '''
     n = (2*np.pi)/T
     M = n*(date-to)
     nextE = [solve(eccentricity_anomaly, varM,vare, 0.001) for varM,vare in zip(M,e)]
     E = np.array(nextE)
-    r1 = a*(1.-e*cos(E))
+    #E = solve(eccentricity_anomaly, M,e, 0.001)
     f1 = sqrt(1.+e)*sin(E/2.)
     f2 = sqrt(1.-e)*cos(E/2.)
     f = 2.*np.arctan2(f1,f2)
@@ -346,9 +377,10 @@ def calc_XY(a,T,to,e,i,w,O,date):
     r = (a*(1.-e**2))/(1.+(e*cos(f)))
     X = r * ( cos(O)*cos(w+f) - sin(O)*sin(w+f)*cos(i) )
     Y = r * ( sin(O)*cos(w+f) + cos(O)*sin(w+f)*cos(i) )
-    return X,Y
+    Z = r * sin(w+f)*sin(i)
+    return X,Y,Z
 
-def calc_velocities(a2,T2,to2,e,i,w,O2,date,dist):
+def calc_velocities(a,T,to,e,i,w,O,date,dist):
     ''' Compute 3-d velocity of a single object on a Keplerian orbit given a 
         set of orbital elements at a single observation point.  Uses my eqns derived from Seager 
         Exoplanets Ch2.
@@ -364,14 +396,16 @@ def calc_velocities(a2,T2,to2,e,i,w,O2,date,dist):
             m_tot [Msol]: total system mass
         Returns: X dot, Y dot, Z dot three dimensional velocities [km/s]
     '''
-    a_km = to_si(a2*1000.,0,dist)
+    # convert to km:
+    a_km = to_si(a*1000.,0.,dist)
     a_km = a_km[0]
     
     # Compute true anomaly:
-    n = (2*np.pi)/T2
-    M = n*(date-to2)
+    n = (2*np.pi)/T
+    M = n*(date-to)
     nextE = [solve(eccentricity_anomaly, varM,vare, 0.001) for varM,vare in zip(M,e)]
     E = np.array(nextE)
+    #E = solve(eccentricity_anomaly, M,e, 0.001)
     r1 = a*(1.-e*cos(E))
     f1 = sqrt(1.+e)*sin(E/2.)
     f2 = sqrt(1.-e)*cos(E/2.)
@@ -380,19 +414,64 @@ def calc_velocities(a2,T2,to2,e,i,w,O2,date,dist):
     # Compute velocities:
     rdot = ( (n*a_km) / (np.sqrt(1-e**2)) ) * e*sin(f)
     rfdot = ( (n*a_km) / (np.sqrt(1-e**2)) ) * (1 + e*cos(f))
-    Xdot = rdot * (cos(O2)*cos(w+f) - sin(O2)*sin(w+f)*cos(i)) + \
-           rfdot * (-cos(O2)*sin(w+f) - sin(O2)*cos(w+f)*cos(i))
-    Ydot = rdot * (sin(O2)*cos(w+f) + cos(O2)*sin(w+f)*cos(i)) + \
-           rfdot * (-sin(O2)*sin(w+f) + cos(O2)*cos(w+f)*cos(i))
+    Xdot = rdot * (cos(O)*cos(w+f) - sin(O)*sin(w+f)*cos(i)) + \
+           rfdot * (-cos(O)*sin(w+f) - sin(O)*cos(w+f)*cos(i))
+    Ydot = rdot * (sin(O)*cos(w+f) + cos(O)*sin(w+f)*cos(i)) + \
+           rfdot * (-sin(O)*sin(w+f) + cos(O)*cos(w+f)*cos(i))
     Zdot = ((n*a_km) / (np.sqrt(1-e**2))) * sin(i) * (cos(w+f) + e*cos(w))
     
     Xdot = Xdot*(u.km/u.yr).to((u.km/u.s))
     Ydot = Ydot*(u.km/u.yr).to((u.km/u.s))
     Zdot = Zdot*(u.km/u.yr).to((u.km/u.s))
     return Xdot,Ydot,Zdot
+
+def calc_accel(a,T,to,e,i,w,O,date,dist):
+    ''' Compute 3-d acceleration of a single object on a Keplerian orbit given a 
+        set of orbital elements at a single observation point.  
+        Inputs:
+            a [as]: semi-major axis in mas
+            T [yrs]: period
+            to [yrs]: epoch of periastron passage (in same time structure as dates)
+            e: eccentricity
+            i [rad]: inclination
+            w [rad]: argument of periastron
+            O [rad]: longitude of nodes
+            date [yrs]: observation date
+            dist [pc]: distance to system in pc
+        Returns: X ddot, Y ddot, Z ddot three dimensional velocities [m/s/yr]
+    '''
+    # convert to km:
+    a_km = to_si(a*1000.,0.,dist)[0]
+    # Compute true anomaly:
+    n = (2*np.pi)/T
+    M = n*(date-to)
+    nextE = [solve(eccentricity_anomaly, varM,vare, 0.001) for varM,vare in zip(M,e)]
+    E = np.array(nextE)
+    #E = solve(eccentricity_anomaly, M,e, 0.001)
+    # r and f:
+    f1 = sqrt(1.+e)*sin(E/2.)
+    f2 = sqrt(1.-e)*cos(E/2.)
+    f = 2.*np.arctan2(f1,f2)
+    r = (a_km*(1-e**2))/(1+e*cos(f))
+    # Time derivatives of r, f, and E:
+    Edot = n/(1-e*cos(E))
+    rdot = e*sin(f)*((n*a_km)/(sqrt(1-e**2)))
+    fdot = ((n*(1+e*cos(f)))/(1-e**2))*((sin(f))/sin(E))
+    # Second time derivatives:
+    Eddot = ((-n*e*sin(f))/(1-e**2))*fdot
+    rddot = a_km*e*cos(E)*(Edot**2) + a_km*e*sin(E)*Eddot
+    fddot = Eddot*(sin(f)/sin(E)) - (Edot**2)*(e*sin(f)/(1-e*cos(E)))
+    # Positional accelerations:
+    Xddot = (rddot - r*fdot**2)*(cos(O)*cos(w+f) - sin(O)*sin(w+f)*cos(i)) + \
+            (-2*rdot*fdot - r*fddot)*(cos(O)*sin(w+f) + sin(O)*cos(w+f)*cos(i))
+    Yddot = (rddot - r*fdot**2)*(sin(O)*cos(w+f) + cos(O)*sin(w+f)*cos(i)) + \
+            (2*rdot*fdot + r*fddot)*(sin(O)*sin(w+f) + cos(O)*cos(w+f)*cos(i))
+    Zddot = sin(i)*((rddot - r*fdot**2)*sin(w+f) + (2*rdot*fdot+ r*fddot*cos(w+f)))
+    return Xddot*(u.km/u.yr/u.yr).to((u.m/u.s/u.yr)), Yddot*(u.km/u.yr/u.yr).to((u.m/u.s/u.yr)), \
+                    Zddot*(u.km/u.yr/u.yr).to((u.m/u.s/u.yr))
     
-def calc_orbit(a,T,to,e,i,w,O,d,dist):
-    ''' Compute 3-d velocity of a single object on a Keplerian orbit given a 
+'''def calc_orbit(a,T,to,e,i,w,O,d,dist):
+     Compute 3-d velocity of a single object on a Keplerian orbit given a 
         set of orbital elements at a single observation point.  Uses my eqns derived from Seager 
         Exoplanets Ch2.
         Inputs:
@@ -404,26 +483,37 @@ def calc_orbit(a,T,to,e,i,w,O,d,dist):
             w [rad]: argument of periastron
             O [rad]: longitude of nodes
             date [yrs]: observation date
-            m_tot [Msol]: total system mass
+            dist [pc]: distance to system in pc
         Returns: 
-            X, Y positions in plane of the sky [mas],
+            X, Y, Z positions in plane of the sky [mas],
             X dot, Y dot, Z dot three dimensional velocities [km/s]
-            Orbital elements a2 [as], T2 [yr], to2 [yr], e, i [deg], w [deg], O2 [deg]
+            X ddot, Y ddot, Z ddot 3d accelerations in [m/s/yr]
+    
+    X1,Y1,Z1 = calc_XYZ(a,T,to,e,i,w,O,d)
+    X2,Y2,Z2 = (X1*u.arcsec).to(u.mas).value, (Y1*u.arcsec).to(u.mas).value, (Z1*u.arcsec).to(u.mas).value
+    Xdot,Ydot,Zdot = calc_velocities(a,T,to,e,i,w,O,d,dist)
+    Xddot,Yddot,Zddot = calc_accel(a,T,to,e,i,w,O,d,dist)
+    return X2, Y2, Z2, Xdot, Ydot, Zdot, Xddot, Yddot, Zddot'''
+
+def calc_OFTI(a,T,to,e,i,w,O,d,dist):
+    '''Does the same as calc_orbit but includes the OFTI scale and rotate step, and returns
+       scaled and rotated orbital parameters
     '''
-    X1,Y1 = calc_XY(a,T,to,e,i,w,O,d)
+    X1,Y1,Z1 = calc_XYZ(a,T,to,e,i,w,O,d)
     a2,T2,to2,O2 = scale_and_rotate(X1,Y1)
-    X2,Y2 = calc_XY(a2,T2,to2,e,i,w,O2,d)
-    X2,Y2 = X2*1000., Y2*1000.
+    X2,Y2,Z2 = calc_XYZ(a2,T2,to2,e,i,w,O2,d)
+    X2,Y2,Z2 = (X2*u.arcsec).to(u.mas).value, (Y2*u.arcsec).to(u.mas).value, (Z2*u.arcsec).to(u.mas).value
     Xdot,Ydot,Zdot = calc_velocities(a2,T2,to2,e,i,w,O2,d,dist)
+    Xddot,Yddot,Zddot = calc_accel(a2,T2,to2,e,i,w,O2,d,dist)
     i,w,O2 = np.degrees(i),np.degrees(w),np.degrees(O2)
-    return X2, Y2, Xdot, Ydot, Zdot, a2, T2, to2, e, i, w, O2
+    return X2,Y2,Z2,Xdot,Ydot,Zdot,Xddot,Yddot,Zddot,a2,T2,to2,e,i,w,O2
 
 
 ########### Perform initial run to get initial chi-squared:
 # Draw random orbits:
 a,T,const,to,e,i,w,O,m1,dist = draw_priors(10000)
 # Compute positions and velocities:
-X,Y,Xdot,Ydot,Zdot,a2,T2,to2,e,i,w,O2 = calc_orbit(a,T,to,e,i,w,O,d,dist)
+X,Y,Z,Xdot,Ydot,Zdot,Xddot,Yddot,Zddot,a2,T2,to2,e,i,w,O2 = calc_OFTI(a,T,to,e,i,w,O,d,dist)
 # Compute chi squared:
 dr = (deltaRA - Y)/(deltaRA_err)
 dd = (deltaDec - X)/(deltaDec_err)
@@ -442,7 +532,7 @@ while num <= accept_min:
     # Draw random orbits:
     a,T,const,to,e,i,w,O,m1,dist = draw_priors(10000)
     # Compute position and velocities:
-    X,Y,Xdot,Ydot,Zdot,a2,T2,to2,e,i,w,O2 = calc_orbit(a,T,to,e,i,w,O,d,dist)
+    X,Y,Z,Xdot,Ydot,Zdot,Xddot,Yddot,Zddot,a2,T2,to2,e,i,w,O2 = calc_OFTI(a,T,to,e,i,w,O,d,dist)
     # Compute chi squared:
     dr = (deltaRA - Y)/(deltaRA_err)
     dd = (deltaDec - X)/(deltaDec_err)
