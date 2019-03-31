@@ -1,5 +1,6 @@
-# LOFTI
+# LOFTI . 
 #### Or: Logan's OFTI
+[![DOI](https://zenodo.org/badge/115829870.svg)](https://zenodo.org/badge/latestdoi/115829870)
 This is my implementation of Orbits for the Impatient developed by Blunt et.al. 2017 (http://iopscience.iop.org/article/10.3847/1538-3881/aa6930/pdf).  It was developed independantly from that group's efforts based on this paper. 
 
 This repository contains examples of two different versions of LOFTI.  The first, in the "Using_Astrometry" directory, is my version of the OFTI methodology using multiple astrometry observations to fit one orbiting body around a host star.  The script here is the relative astrometry for the system GSC 6214-210, which is reported in Pearce et. al. 2019 (Arxiv: https://arxiv.org/pdf/1812.08860.pdf Publisher: https://iopscience.iop.org/article/10.3847/1538-3881/aafacb/pdf), and used to generate the orbit plots in that paper.
