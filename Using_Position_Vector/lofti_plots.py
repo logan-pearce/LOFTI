@@ -34,6 +34,9 @@ optional arguments:
   -f COLLECT_INTO_ONE_FILE, --collect_into_one_file COLLECT_INTO_ONE_FILE
                         input a previously made master flat image. Default =
                         False
+  -m PLT_STYLE, --plt_style PLT_STYLE
+                        Name of matplotlib style sheet to use in plots.
+                        Default = mpl default
 
 example:
     python lofti_plots.py DSTuc DSTuc_ofti_output_2019-03-19 -s 48  <- Generate plots
@@ -294,7 +297,7 @@ def plot_orbits(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
     if colorbar == True:
         plt.colorbar().set_label(colorlabel)
     plt.savefig(filename+'.pdf', format='pdf')
-    plt.savefig(filename+'.jpg', format='jpg', dpi=300)
+    plt.savefig(filename+'.png', format='png', dpi=300)
     plt.close(fig)
     return fig
 
@@ -375,7 +378,7 @@ def plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
     #if colorbar == True:
     #    plt.colorbar().set_label(colorlabel)
     plt.savefig(filename+'.pdf', format='pdf')
-    plt.savefig(filename+'.jpg', format='jpg', dpi=300)
+    plt.savefig(filename+'.png', format='png', dpi=300)
     return fig
 
 ################################# Begin script ##########################
