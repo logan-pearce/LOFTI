@@ -64,9 +64,13 @@ parser.add_argument("system", help="name of the system under study to use for la
 parser.add_argument("directory", help="the path to the directory containing lofti results", type=str)
 # Optional positional arguments"
 parser.add_argument("-s","--size", help="Number of processes. default = 6",type=str)
-parser.add_argument("-f","--collect_into_one_file", help="input a previously made master flat image. Default = False",type=str)
+parser.add_argument("-f","--collect_into_one_file", help="Set to True if the lofti fitting process did\
+     not terminate on its own. Default = False",type=str)
+parser.add_argument("-m","--plt_style", help="Name of matplotlib style sheet to use in plots.  Default = mpl default",type=str)
 
 args = parser.parse_args()
+
+plt.style.use(args.plt_style)
 
 directory = args.directory+'/'
 system = args.system
