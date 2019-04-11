@@ -13,6 +13,9 @@ Second is a version of LOFTI that fits in 6-d phasespace, one observation of RA/
 The orbits from the fit of GK - GI Tau
 
 
+The script "lofti_plots.py" produces stats for each parameter, histograms of the distribution of each parameter, histograms of the distribution of positions, velocities, and accelerations in all 3 dimensions for each orbit in the posterior, a selection of 100 orbits plotted in XY, XZ, YZ planes, and a selection of 20 orbits plotted in 3d.
+
+
 ## Author
 The project was completed by Logan Pearce (http://www.loganpearcescience.com), under the mentorship of Dr Adam Kraus at the University of Texas at Austin.
 
