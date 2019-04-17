@@ -7,8 +7,8 @@ This is the version of LOFTI that fits in 6-d phasespace, one observation of RA/
 Repository contents:
 
 Solving_for_orbital_elements_given_velocities.pdf outlines the math and the methodology used in the fit.  
-lofti_phasespace_GKTau_mpi.py the script for fitting Gaia astrometry to the wide binary pair GK Tau and GI Tau.
-lofti_plot.py script which generates the plots and statistical results of the fit.
+lofti_phasespace.py the script for fitting Gaia astrometry to the wide binary pair GK Tau and GI Tau.
+lofti_plots.py script which generates the plots and statistical results of the fit.
 
 The script included in this repository is for the wide binary system of GK and GI Tau, which doesn't include radial velocity, so both Z position and Zdot are unconstrained in the fit.  
 
