@@ -18,8 +18,8 @@
 # usage: mpiexec -n number_of_processes python lofti_phasespace_DSTuc_mpi.py
 
 example:
-    mpiexec -n 12 python lofti_phasespace_DSTuc_mpi.py  <- run LOFTI on my laptop using 12 parallel processes
-    ibrun python lofti_phasespace_DSTuc_mpi.py <- sbatch command to run LOFTI on TACC.  For Lonestar 5, set nodes=1
+    mpiexec -n 12 python lofti_phasespace.py  <- run LOFTI on my laptop using 12 parallel processes
+    ibrun python lofti_phasespace.py <- sbatch command to run LOFTI on TACC.  For Lonestar 5, set nodes=1
             and cores = 48
 '''
 
@@ -51,7 +51,7 @@ accept_min = 2200
 
 ######################### Observations ###########################
 ############# Input system observations here #####################
-name = 'HR858'
+name = 'GKTau'
 
 now = str(date.today())
 # Make a directory to store all results:
@@ -61,38 +61,42 @@ directory = name+'_ofti_output_'+now
 comm.barrier()
 
 d = 2015.5
-plxa, plxaerr = 31.25653704078637, 0.07002516454914026
-#plxb, plxberr = 22.650369347977527, 0.029692447045646664
-mA, mAerr = 1.15, 0.04
-mB, mBerr = 0.15, 0.04
+# A = GK Tau
+# B = GI Tau
 
-# Astrometry:
+plxa, plxaerr = 7.736181763296462, 0.0434716242332522
+plxb, plxberr = 7.662587421336056, 0.04604393474172906
+# Mass reference GK Tau: https://arxiv.org/pdf/1706.03505.pdf
+# GI Tau: https://iopscience.iop.org/article/10.3847/1538-4357/aa9e52/pdf
+mA, mAerr = 0.79, 0.07
+mB, mBerr = 0.6, 0.3
+
+# Astrometry from Gaia DR2:
 # (RA/Dec are reported in degrees, errors in mas)
-RAa, RAaerr = 42.98497787139148, 0.028634202432337177*mas_to_deg
-RAb, RAberr = 42.985713559186436, 0.07805391546426725*mas_to_deg
-Deca, Decaerr = -30.81406093365788, 0.0484544444440015*mas_to_deg
-Decb, Decberr = -30.81182706733199, 0.11884942670762468*mas_to_deg
+RAa, RAaerr = 68.39404779762734, 0.04225973382885226*mas_to_deg
+RAb, RAberr = 68.39194796115807, 0.04693034099138683*mas_to_deg
+Deca, Decaerr = 24.351538070211536, 0.02838685021460219*mas_to_deg
+Decb, Decberr = 24.354652459003447, 0.030860001768019497*mas_to_deg
 
 # Proper motions (in mas/yr):
-pmRAa, pmRAaerr = 123.22860398552068, 0.0702545817340949
-pmRAb, pmRAberr = 137.12462191983275, 0.21310168027505902
-pmDeca, pmDecaerr = 105.78833629143615, 0.1512535007475743
-pmDecb, pmDecberr = 105.86506669323889, 0.3018767938820017
+pmRAa, pmRAaerr = 7.752527330204136, 0.09501610992230507
+pmRAb, pmRAberr = 5.882953921562138, 0.10768919956109295
+pmDeca, pmDecaerr = -20.48313007512066, 0.06976340757304786
+pmDecb, pmDecberr = -20.550925312475705, 0.07597187724061871
+
 
 # Set to True is there are RV measurements to contribute to fit:
 RV = False
 
 # Radial velocity (km/s) from Gaia solution:
 # NO RV for this system
-
-# From Ben's analysis (km/s):
-# Updated numbers 4-2-2019:
-#rva, rvaerr = np.array([8.27,8.08,8.29,8.34,7.74]),np.array([0.10,0.43,0.46,0.28,0.31])
-#rvb, rvberr = np.array([6.25,6.41,6.66,6.42,6.33]),np.array([0.11,0.31,0.30,0.21,0.27])
+ # Enter radial velocity + error for both objects:
+#rva, rvaerr = np.array([]),np.array([])
+#rvb, rvberr = np.array([]),np.array([])
 #rv_rel,rv_err = rvb-rva, np.sqrt(rvaerr**2+rvberr**2)
 
 # RV observation dates:
-#rvbjd = np.array([2454243.850252,2458439.288665,2458441.27394,2458442.302087,2458444.302819])
+#rvbjd = np.array([])
 #rvbjd = Time(rvbjd, format='jd')
 #d_rv = rvbjd.decimalyear
 
@@ -627,22 +631,20 @@ if rank == 0:
     for i in range(size):
         # Collect all the outputs into one file:
         dat = np.loadtxt(open(directory+'/'+name+"_accepted_"+str(i),"rb"),delimiter='   ',ndmin=2)
-        a,T,to,e,i,w,O,m1,dist = dat[:,0],dat[:,1],dat[:,2],dat[:,3],dat[:,4],dat[:,5],dat[:,6],dat[:,7],dat[:,8]
-        c,A,dice = dat[:,9],dat[:,10],dat[:,11]
+        a,T,to,e,i,w,O,c,A,dice = dat[:,0],dat[:,1],dat[:,2],dat[:,3],dat[:,4],dat[:,5],dat[:,6],dat[:,7],dat[:,8],dat[:,9]
         q = open(directory+'/'+name+'_accepted', 'a')
-        for a1,T1,to1,e1,i1,w1,O1,m11,dist1,c1,A1,dice1 in zip(a,T,to,e,i,w,O,m1,dist,c,A,dice):
+        for a1,T1,to1,e1,i1,w1,O1,c1,A1,dice1 in zip(a,T,to,e,i,w,O,c,A,dice):
             delta_chi1 = -(c1-chi_min)/2.0
             AA = np.exp(delta_chi1)
             if AA > dice1:
-                string = '   '.join([str(p) for p in [a1,T1,to1,e1,i1,w1,O1,m11,dist1,c1,AA,dice1]])
+                string = '   '.join([str(p) for p in [a1,T1,to1,e1,i1,w1,O1,c1,AA,dice1]])
                 q.write(string + "\n")
             else:
                 pass
         q.close()
     # Reperform the acceptance step one last time with the lowest chi-min off all processes:
     dat = np.loadtxt(open(directory+'/'+name+"_accepted","rb"),delimiter='   ',ndmin=2)
-    a,T,to,e,i,w,O,m1,dist = dat[:,0],dat[:,1],dat[:,2],dat[:,3],dat[:,4],dat[:,5],dat[:,6],dat[:,7],dat[:,8]
-    c,A,dice = dat[:,9],dat[:,10],dat[:,11]
+    a,T,to,e,i,w,O,c,A,dice = dat[:,0],dat[:,1],dat[:,2],dat[:,3],dat[:,4],dat[:,5],dat[:,6],dat[:,7],dat[:,8],dat[:,9]
     chi_min = np.min(c)
     print 'Minimum chi^2 found: ',chi_min
     q = open(directory+'/'+name+'_accepted', 'w')
