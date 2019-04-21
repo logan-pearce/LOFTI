@@ -409,7 +409,7 @@ while num <= accept_min:
 
     ################## Determine Chi^2 between obs and pred  ###############
     PA_model2 = np.arctan2(X4,-Y4)
-    PA_model = np.degrees(PA_model2)+270.
+    PA_model = (np.degrees(PA_model_proj)+270)%360
     PA_model=np.transpose(PA_model) 
     r_model = np.sqrt((X4**2)+(Y4**2))
     r_model=np.transpose(r_model)
