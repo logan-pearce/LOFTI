@@ -32,20 +32,22 @@ optional arguments:
   -h, --help            show this help message and exit
   -s SIZE, --size SIZE  Number of processes. default = 6
   -f COLLECT_INTO_ONE_FILE, --collect_into_one_file COLLECT_INTO_ONE_FILE
-                        input a previously made master flat image. Default =
+                        Set to True if the lofti fitting process did not terminate on its own. Default =
                         False
   -m PLT_STYLE, --plt_style PLT_STYLE
                         Name of matplotlib style sheet to use in plots.
                         Default = mpl default
   -d DATE, --date DATE
                         Observation date for plots.  Default = 2015.5 (Gaia DR2 date)
+  -a AXLIM, --axlim AXLIM
+                        Axlim for 2d plots (arcsec).  Default = 6 
 
 example:
-    python lofti_plots.py DSTuc DSTuc_ofti_output_2019-03-19 -s 48  <- Generate plots
-         for the DS Tuc system in the directory DSTuc_ofti_output_2019-03-19, which was fit using
+    python lofti_plots.py GKTau GKTau_ofti_output_2019-03-19 -s 48  <- Generate plots
+         for the GK/GI Tau system in the directory GKTau_ofti_output_2019-03-19, which was fit using
          48 parallel processes, and has already been consolidated into one file by the OFTI script
-    python lofti_plots.py DSTuc DSTuc_ofti_output_2019-03-19 -s 48 -f True <- Generate plots
-         for the DS Tuc system in the directory DSTuc_ofti_output_2019-03-19, which was fit using
+    python lofti_plots.py GKTau GKTau_ofti_output_2019-03-19 -s 48 -f True <- Generate plots
+         for the GK/GI Tau system in the directory GKTau_ofti_output_2019-03-19, which was fit using
          48 parallel processes, but which has not been collected into one file by the terminating OFTI script.
 '''
 
@@ -77,6 +79,7 @@ parser.add_argument("-f","--collect_into_one_file", help="Set to True if the lof
 parser.add_argument("-m","--plt_style", help="Name of matplotlib style sheet to use in plots.  Default = mpl default",type=str)
 parser.add_argument("-d","--date", help="Observation date.  Enter reference date for astrometry fits. \
                      Default = 2015.5 (Gaia DR2 date)",type=float)
+parser.add_argument("-a","--axlim", help="Axlim (arcsec)",type=str)
 
 args = parser.parse_args()
 
@@ -96,8 +99,9 @@ else:
 # into one file at the end of the run:
 Collect_into_one_file = False
 
-if args.collect_into_one_file:
+if args.collect_into_one_file == "True":
     Collect_into_one_file = True
+
 
 ################################# Definitions ################################
 
@@ -342,7 +346,11 @@ def plot_1d_hist(params,names,filename,bins,
         plt.xlabel(names[i],fontsize=label_fs)
         ax.get_xaxis().set_label_coords(label_x_x,label_x_y)
         if i == 3:
-            plt.xticks((-100, -50, 0, 50, 100), ('250', '310', '0', '50', '100'))
+            #plt.xticks((-150, -100, -50, 0, 50, 100, 150), ('210', '250', '310', '0', '50', '100','150'))
+            plt.xticks((-100, 0, 100), ('250', '0', '100'))
+        if i == 4:
+            #plt.xticks((-150, -100, -50, 0, 50, 100, 150), ('210', '250', '310', '0', '50', '100','150'))
+            plt.xticks((-100, 0, 100), ('250', '0', '100'))
 
     plt.tight_layout()
     plt.savefig(filename, format='pdf')
@@ -437,7 +445,8 @@ def plot_orbits(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
             plt.ylabel(Zlabel,fontsize=labelsize)
             plt.xlabel(Ylabel,fontsize=labelsize)
     if colorbar == True:
-        plt.colorbar().set_label(colorlabel)
+        plt.colorbar().set_label(colorlabel, fontsize=labelsize)
+    plt.tight_layout()
     plt.savefig(filename+'.pdf', format='pdf')
     plt.savefig(filename+'.png', format='png', dpi=300)
     plt.close(fig)
@@ -519,6 +528,7 @@ def plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, filename, obsdate, plane='xy',
         ax.scatter(Y,X,Z,c=((times-obsdate)/T),cmap=cmap,s=3,lw=0)
     #if colorbar == True:
     #    plt.colorbar().set_label(colorlabel)
+    plt.tight_layout()
     plt.savefig(filename+'.pdf', format='pdf')
     plt.savefig(filename+'.png', format='png', dpi=300)
     return fig
@@ -546,9 +556,9 @@ def plot_observables_hist(a,T,to,e,i,w,O,date,dist, filename,
             X dot, Y dot, Z dot three dimensional velocities [km/s]
             X ddot, Y ddot, Z ddot 3d accelerations in [m/s/yr]
     '''
-    ddot = calc_accel(a,T,to,e,i,w,O,2015.5,44.)
-    dot = calc_velocities(a,T,to,e,i,w,O,2015.5,44.)
-    pos = calc_XYZ(a,T,to,e,i,w,O,2015.5)
+    ddot = calc_accel(a,T,to,e,i,w,O,date,dist)
+    dot = calc_velocities(a,T,to,e,i,w,O,date,dist)
+    pos = calc_XYZ(a,T,to,e,i,w,O,date)
     plt.ioff()
     # Bin size fo 1d hists:
     bins=bins
@@ -558,63 +568,63 @@ def plot_observables_hist(a,T,to,e,i,w,O,date,dist, filename,
     plt.hist(pos[0],bins=50)
     plt.xlabel(r'$X$ [mas]')
     plt.tight_layout()
-    plt.savefig(filename+'_X', format='pdf')
+    plt.savefig(filename+'_X.pdf', format='pdf')
     plt.close(fig)
     # Plot Y:
     fig = plt.figure(figsize=figsize)
     plt.hist(pos[1],bins=50)
     plt.xlabel(r'$Y$ [mas]')
     plt.tight_layout()
-    plt.savefig(filename+'_Y', format='pdf')
+    plt.savefig(filename+'_Y.pdf', format='pdf')
     plt.close(fig)
     # Plot Z:
     fig = plt.figure(figsize=figsize)
     plt.hist(pos[2],bins=50)
     plt.xlabel(r'$Z$ [mas]')
     plt.tight_layout()
-    plt.savefig(filename+'_Z', format='pdf')
+    plt.savefig(filename+'_Z.pdf', format='pdf')
     plt.close(fig)
     # Plot Xdot:
     fig = plt.figure(figsize=figsize)
     plt.hist(dot[0],bins=50)
     plt.xlabel(r'$\dot{X}$ [km/s]')
     plt.tight_layout()
-    plt.savefig(filename+'_xdot', format='pdf')
+    plt.savefig(filename+'_xdot.pdf', format='pdf')
     plt.close(fig)
     # Plot Ydot:
     fig = plt.figure(figsize=figsize)
     plt.hist(dot[1],bins=50)
     plt.xlabel(r'$\dot{Y}$ km/s]')
     plt.tight_layout()
-    plt.savefig(filename+'_ydot', format='pdf')
+    plt.savefig(filename+'_ydot.pdf', format='pdf')
     plt.close(fig)
     # Plot Zdot:
     fig = plt.figure(figsize=figsize)
     plt.hist(dot[2],bins=50)
     plt.xlabel(r'$\dot{Z}$ [km/s]')
     plt.tight_layout()
-    plt.savefig(filename+'_zdot', format='pdf')
+    plt.savefig(filename+'_zdot.pdf', format='pdf')
     plt.close(fig)
     # Plot Xddot:
     fig = plt.figure(figsize=figsize)
     plt.hist(ddot[0],bins=50)
     plt.xlabel(r'$\ddot{X}$ [m/s/yr]')
     plt.tight_layout()
-    plt.savefig(filename+'_xddot', format='pdf')
+    plt.savefig(filename+'_xddot.pdf', format='pdf')
     plt.close(fig)
     # Plot Yddot:
     fig = plt.figure(figsize=figsize)
     plt.hist(ddot[1],bins=50)
     plt.xlabel(r'$\ddot{Y}$ [m/s/yr]')
     plt.tight_layout()
-    plt.savefig(filename+'_yddot', format='pdf')
+    plt.savefig(filename+'_yddot.pdf', format='pdf')
     plt.close(fig)
     # Plot Zddot:
     fig = plt.figure(figsize=figsize)
     plt.hist(ddot[2],bins=50)
     plt.xlabel(r'$\ddot{Z}$ [m/s/yr]')
     plt.tight_layout()
-    plt.savefig(filename+'_zddot', format='pdf')
+    plt.savefig(filename+'_zddot.pdf', format='pdf')
     plt.close(fig)
     return fig
 
@@ -623,10 +633,11 @@ def plot_observables_hist(a,T,to,e,i,w,O,date,dist, filename,
 
 
 ################################# Begin script ##########################
-
+ 
 files = directory+system+"_accepted"
 
 if Collect_into_one_file == True:
+    #os.system('touch '+files)
     q = open(files, 'w')
     ## Prepare fitter output:
     # Collect into one file:
@@ -656,7 +667,7 @@ if Collect_into_one_file == True:
             q.write(string + "\n")
 
     q.close()'''
-
+    
 
 dat = np.loadtxt(open(files,"rb"),delimiter='   ',ndmin=2)
 num=dat.shape[0]
@@ -667,8 +678,9 @@ i,w,O = np.radians(i_deg),np.radians(w_deg),np.radians(O_deg)
 
 ### Input distance and observation date:
 
-d_star,d_star_err = 139.69, 1.32
-print 'I have distance to system as:',d_star,d_star_err
+d_star = 139.69
+d_star_err = 1.32
+print 'I have distance to system as:',d_star
 yn = raw_input('Is that right? Enter y for yes, n for no.')
 if yn == 'n':
     d_star = float(raw_input('Enter d_star: '))
@@ -687,8 +699,11 @@ a_au=a*d_star
 periastron = (1.-e)*a_au
 
 ### Set what parameters to plot in the histograms:
-a_au2 = a_au[np.where(a_au<400)]
-to2 = to[np.where(a_au<400)]
+a_au2 = a_au[np.where(a_au<200)]
+to2 = to[np.where(a_au<200)]
+T2 = T[np.where(a_au<200)]
+#a_au2 = a_au
+#to2 = to
 
 w_temp = w_deg.copy()
 for j in range(len(w_deg)):
@@ -696,23 +711,38 @@ for j in range(len(w_deg)):
         w_temp[j] = w_temp[j] - 360.
     else:
         pass
+O_temp = O_deg.copy()%360
+for j in range(len(O_deg)):
+    if O_temp[j] > 180:
+        O_temp[j] = O_temp[j] - 360.
+    else:
+        pass
 
-plot_params = [a_au2,e,i_deg,w_deg,O_deg,to2,periastron] 
-plot_params_names = [r"$a \; (AU)$",r"$e$",r"$ i \; (deg)$",r"$ \omega \; (deg)$",r"$\Omega \; (deg)$",r"$T0 \; (yr)$",\
+plot_params = [a_au2,T2, e,i_deg,w_deg,O_deg,to2,periastron] 
+plot_params_names = [r"$a \; (AU)$",r"$P$",r"$e$",r"$ i \; (deg)$",r"$ \omega \; (deg)$",r"$\Omega \; (deg)$",r"$T0 \; (yr)$",\
                          r"$a\,(1-e) \; (AU)$"]
+
 
 ######################### Do the things ###################################
 
 # Write out stats:
 print 'Writing out stats'
 stats_name = directory+system+'_stats'
-write_stats([a_au2,e,i_deg,w_temp,O_deg,to2,periastron],plot_params_names,stats_name)
+write_stats([a_au,T,e,i_deg,w_temp,O_temp,to,periastron],plot_params_names,stats_name)
 
 # Plot 1-D histograms
 print 'Making histograms'
 output_name = directory + system+"_hists.pdf"
-plot_1d_hist([a_au2,e,i_deg,w_temp,O_deg,to2,periastron],plot_params_names,output_name,50,tick_fs = 25,
+plot_1d_hist([a_au2,T2,e,i_deg,w_temp,O_temp,to2,periastron],plot_params_names,output_name,50,tick_fs = 25,
                      label_fs = 30)
+'''
+print np.max(a_au2)
+fig = plt.figure(figsize=(7.5, 6.))
+plt.hist(a_au2,bins=600)
+plt.xlabel(r'$a$ [au]')
+plt.tight_layout()
+plt.savefig(directory + system+'_sma.pdf', format='pdf')
+plt.close(fig)'''
 
 print 'Plotting observable posteriors'
 os.system('mkdir '+directory+'observable_posteriors')
@@ -722,31 +752,40 @@ plot_observables_hist(a,T,to,e,i,w,O,date,d_star,output_name)
 # Plot 2-D orbits
 print 'Plotting orbits'
 # Select random orbits from sample:
-index = np.random.choice(range(0,dat.shape[0]),replace=False,size=100)
+if a.shape[0] >= 100:
+    size = 100
+else:
+    size = a.shape[0]
+
+index = np.random.choice(range(0,dat.shape[0]),replace=False,size=size)
 a1,T1,to1,e1,i1,w1,O1 = a[index],T[index],to[index],e[index],i[index],w[index],O[index]
 
+if args.axlim:
+    axlim = np.float(args.axlim)
+else:
+    axlim = 6
 
 # Plot those orbits:
 # RA/Dec plane:
 print 'XY plane'
 output_name = directory + system+"_orbits"
-plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6, ticksize = 15, 
+plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = axlim, ticksize = 15, 
                     labelsize = 20)
 
 # X/Z plane:
 print 'XZ plane'
 output_name = directory + system+"_orbits_xz"
-plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 8, plane = 'xz')
+plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = axlim, plane = 'xz')
 
 # Y/Z plane:
 print 'YZ plane'
 output_name = directory + system+"_orbits_yz"
-plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6, plane = 'yz')
+plot_orbits(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = axlim, plane = 'yz')
 
 # 3D
 print '3D'
 output_name = directory + system+"_orbits_3d"
-plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = 6, num_orbits = 20)
+plot_orbits3d(a1,T1,to1,e1,i1,w1,O1, output_name, date, axlim = axlim, num_orbits = 20)
 
 print 'Done'
 
