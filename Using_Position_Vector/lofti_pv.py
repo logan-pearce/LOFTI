@@ -241,7 +241,14 @@ if rank == 0:
     print 'pmDec, err in km/s:',pmDec_kms,pmDec_err_kms
     print 'pmRA, err in km/s:',pmRA_kms,pmRA_err_kms
     if RV == True:
-        print 'rv at Gaia obs date in km/s:',vz_kms,vz_kms_err
+        print 'rv at obs date in km/s:',vz_kms,vz_kms_err
+    print 'Total relative velocity [km/s]:',np.sqrt(pmDec_kms**2+pmRA_kms**2),'+/-',np.sqrt(pmDec_err_kms**2+pmRA_err_kms**2)
+    print 'Total relative velocity [mas/yr]:',np.sqrt(pmDec**2+pmRA**2),'+/-',np.sqrt(pmDecerr**2+pmRAerr**2)
+    print 'sep,err [mas]',rho,rhoerr, 'pa,err [deg]:',pa,paerr
+    print 'sep,err [AU]',(rho/1000)*d_star
+    print 'sep, err [km]',to_si(rho,0,d_star),to_si(rhoerr,0,d_star)
+    print 'D_star',d_star
+    print 't_ref',tref
     print
     print 'Starting OFTI run'
 
