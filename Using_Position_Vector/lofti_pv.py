@@ -248,7 +248,6 @@ if rank == 0:
     print 'sep,err [AU]',(rho/1000)*d_star
     print 'sep, err [km]',to_si(rho,0,d_star),to_si(rhoerr,0,d_star)
     print 'D_star',d_star
-    print 't_ref',tref
     print
     print 'Starting OFTI run'
 
