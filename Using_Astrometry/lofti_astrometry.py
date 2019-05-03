@@ -215,9 +215,9 @@ PA_obs_rad = np.radians(PA_obs)
 dec = r_obs*np.cos(PA_obs_rad)
 ra = r_obs*np.sin(PA_obs_rad)
 
-ref = (r_obs.shape[0])/2 #compute the index of the middle observation epoch as the reference epoch for all
-#future calcs - the one we want to scale to to minimize chi-squared.  For even numbers of observations,
-#it selects the later of the two middles
+# Take the reference epoch as the one with the smallest total error:
+total_error = np.sqrt(rerr**2 + terr**2)
+ref = np.where(total_error == np.min(total_error))[0]
 
 
 ######################### Draw priors  #############################
@@ -503,7 +503,7 @@ while num <= accept_min:
 	#determines the minimum chi from this loop
     if new_min < chi_min:
 		chi_min = new_min
-		#print 'Found new chi min: ',chi_min
+		print 'Found new chi min: ',chi_min
 		found_new_chi_min = 'yes'
 		#kk = open(directory+'/'+name+'_chimin_tracking', 'a')
 		#kk.write(str(chi_min)+ "\n")
